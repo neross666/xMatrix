@@ -1,25 +1,34 @@
 ﻿cmake_minimum_required(VERSION 3.20)
 
-
 project(Solution 
-	LANGUAGES CXX	
+	LANGUAGES CXX
 	VERSION 1.0.0)
+
+option(USE_CUDA "Use CUDA" ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-
+find_package(OpenMP REQUIRED)
 find_package(spdlog REQUIRED)
 
+file(GLOB cpu_source_files "${CMAKE_SOURCE_DIR}/*.cpp")
+file(GLOB gpu_source_files "${CMAKE_SOURCE_DIR}/*.cu")
 
-add_executable(xMatrix 
-	"xMatrix.h" 
-	"xMatrix.cpp"
-	"kernel.cu"
-	"kernel.cuh"
-	"main.cpp"
- )
+if(USE_CUDA)
+    enable_language(CUDA)
+	add_definitions(-DUSE_CUDA)
+    find_package(CUDAToolkit REQUIRED)
+	include_directories(${CUDAToolkit_INCLUDE_DIRS})
+    
+	add_executable(xMatrix ${cpu_source_files} ${gpu_source_files})
+    
+	target_link_libraries(xMatrix CUDA::cudart)
+else(USE_CUDA)
+    add_executable(xMatrix ${cpu_source_files})
+endif()   
+
 
 target_include_directories(xMatrix
 INTERFACE
@@ -31,7 +40,13 @@ target_compile_definitions(xMatrix
 	#PREDEFINE
 )
 
-target_link_libraries(xMatrix 
-PUBLIC 
+target_link_libraries(
+xMatrix 
+#PRIVATE 
 	spdlog::spdlog
+	OpenMP::OpenMP_CXX
 	)
+
+
+
+#set(CMAKE_CUDA_ARCHITECTURES 61)

@@ -12,16 +12,22 @@ int main()
 	auto B = xMatrixf::makeRandMat(N, K);
 	xMatrixf C1(M, K);
 	xMatrixf C2(M, K);
+	xMatrixf C3(M, K);
 	spdlog::info("matrix multiply A[{}][{}] x B[{}][{}]", M, N, N, K);
 
 	spdlog::info("multi1 begin...");
 	multi1(*A, *B, C1);
 	spdlog::info("multi1 done.");
+
 	spdlog::info("multi2 begin...");
 	multi2(*A, *B, C2);
 	spdlog::info("multi2 done.");
 
-	assert(isEqual(C1, C2));
+	spdlog::info("multi17 begin...");
+	multi17(*A, *B, C3);
+	spdlog::info("multi17 done.");
+
+	assert(isEqual(C1, C3));
 
 	print(*A);
 	print(*B);

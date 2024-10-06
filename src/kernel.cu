@@ -1,26 +1,10 @@
 ﻿#include "kernel.cuh"
 
-
-__global__ void WarmupAdd(int* src1, int* src2, int*dst, size_t pitch, size_t rows, size_t cols)
+__global__ void WarmupMulti(float* src1, float* src2, float* dst,
+	size_t pitch_src1, size_t pitch_src2, size_t pitch_dst,
+	size_t M, size_t N, size_t S)
 {
-	unsigned int tid = threadIdx.x + blockIdx.x*blockDim.x;
-	unsigned int idx_r = tid / cols;
-	unsigned int idx_c = tid % cols;
-
-	if (idx_r < rows && idx_c < cols)
-	{
-		size_t offset = idx_r * pitch;
-		int* ptr_s1 = (int*)((char*)src1 + offset);
-		int* ptr_s2 = (int*)((char*)src2 + offset);
-		int* ptr_d = (int*)((char*)dst + offset);
-		ptr_d[idx_c] = ptr_s1[idx_c] + ptr_s2[idx_c];
-	}
-}
-
-
-__global__ void WarmupMulti(int* src1, int* src2, int* dst, size_t pitch_src1, size_t pitch_src2, size_t pitch_dst, size_t M, size_t N, size_t S)
-{
-	unsigned int tid = threadIdx.x + blockIdx.x*blockDim.x;
+	unsigned int tid = threadIdx.x + blockIdx.x * blockDim.x;
 	unsigned int idx_r = tid / S;
 	unsigned int idx_c = tid % S;
 
@@ -28,17 +12,31 @@ __global__ void WarmupMulti(int* src1, int* src2, int* dst, size_t pitch_src1, s
 	{
 		size_t offset_s1 = idx_r * pitch_src1;
 		size_t offset_dst = idx_r * pitch_dst;
-		int* ptr_s1 = (int*)((char*)src1 + offset_s1);
-		int* ptr_d = (int*)((char*)dst + offset_dst);
+		float* ptr_s1 = (float*)((char*)src1 + offset_s1);
+		float* ptr_d = (float*)((char*)dst + offset_dst);
 
-		int tmp = 0;
+		float tmp = 0;
 		for (size_t i = 0; i < N; i++)
 		{
 			size_t offset_s2 = i * pitch_src2;
-			int* ptr_s2 = (int*)((char*)src2 + offset_s2);
+			float* ptr_s2 = (float*)((char*)src2 + offset_s2);
 
 			tmp += ptr_s1[i] * ptr_s2[idx_c];
 		}
 		ptr_d[idx_c] = tmp;
 	}
+}
+
+void WarmupMultiWrap(float* src1, float* src2, float* dst,
+	size_t pitch_src1, size_t pitch_src2, size_t pitch_dst,
+	size_t M, size_t N, size_t S)
+{
+	rsize_t nsize = M * S;
+
+	dim3 block(4);
+	dim3 grid((nsize - 1) / block.x + 1);
+	//TIMING("WarmupMulti")
+	WarmupMulti << <grid, block >> > (src1, src2, dst,
+		pitch_src1, pitch_src2, pitch_dst,
+		M, N, S);
 }
