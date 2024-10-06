@@ -27,6 +27,8 @@ int main()
 	multi17(*A, *B, C3);
 	spdlog::info("multi17 done.");
 
+	print(C1);
+	print(C3);
 	assert(isEqual(C1, C3));
 
 	print(*A);

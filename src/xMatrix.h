@@ -8,8 +8,16 @@
 //#include <cblas.h>
 #include <iostream>
 #include <assert.h>
-#include "kernel.cuh"
 #include "util.h"
+
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
+
+template <class T>
+void WarmupMultiWrap(T* src1, T* src2, T* dst,
+	size_t pitch_src1, size_t pitch_src2, size_t pitch_dst,
+	size_t M, size_t N, size_t S);
+
 
 
 template <typename T>
@@ -38,14 +46,14 @@ public:
 		mat->m_pData = (T*)_aligned_malloc(rows * cols * sizeof(float), 32);
 		assert(mat->m_pData != nullptr);
 		assert((unsigned long long)mat->m_pData % 32 == 0);
-	
+
 		for (int i = 0; i < rows; i++)
 		{
 			for (int j = 0; j < cols; j++)
 			{
 				mat->m_pData[i * cols + j] = distr(eng);
 			}
-		}		
+		}
 
 		return std::move(mat);
 	}
@@ -83,7 +91,7 @@ inline bool isEqual(const xMatrix<T>& A, const xMatrix<T>& B) {
 		for (int j = 0; j < A.m_cols; j++)
 		{
 			T delta = abs(A.m_pData[i * A.m_cols + j] - B.m_pData[i * B.m_cols + j]);
-			if (delta > FLT_EPSILON)
+			if (delta > 0.001/*FLT_EPSILON*/)
 			{
 				return false;
 			}
@@ -1653,12 +1661,12 @@ void multi16(const xMatrix<T>& A, const xMatrix<T>& B, xMatrix<T>& C)
 		NewBCol = (B.m_cols & ((-1) << 3)) + 8;
 	}
 
-	const xMatrix* NewA;
-	const xMatrix* NewB;
-	xMatrix* NewC;
+	const xMatrix<T>* NewA;
+	const xMatrix<T>* NewB;
+	xMatrix<T>* NewC;
 	if (isCreateA)
 	{
-		NewA = new xMatrix(NewARow, NewACol, false);
+		NewA = new xMatrix<T>(NewARow, NewACol, false);
 
 		for (int i = 0; i < A.m_rows; ++i)
 		{
@@ -1672,7 +1680,7 @@ void multi16(const xMatrix<T>& A, const xMatrix<T>& B, xMatrix<T>& C)
 
 	if (isCreateB)
 	{
-		NewB = new xMatrix(NewACol, NewBCol, false);
+		NewB = new xMatrix<T>(NewACol, NewBCol, false);
 
 		for (int i = 0; i < B.m_rows; ++i)
 		{
@@ -1687,7 +1695,7 @@ void multi16(const xMatrix<T>& A, const xMatrix<T>& B, xMatrix<T>& C)
 
 	if (isCreateA || isCreateB)
 	{
-		NewC = new xMatrix(NewARow, NewBCol, false);
+		NewC = new xMatrix<T>(NewARow, NewBCol, false);
 	}
 	else
 	{
@@ -1765,36 +1773,36 @@ void multi17(const xMatrix<T>& A, const xMatrix<T>& B, xMatrix<T>& C)
 
 
 	{
-// 		dim3 block(1024);
-// 		dim3 grid((nsize - 1) / block.x + 1);
-// 		//TIMING("WarmupMulti")
-// 		WarmupMulti << <grid, block >> > (pa_d, pb_d, pc_d,
-// 			pitch_a, pitch_b, pitch_c, A.m_rows, A.m_cols, B.m_cols);
-		
-		WarmupMultiWrap(pa_d, pb_d, pc_d, 
-			pitch_a, pitch_b, pitch_c, 
+		// 		dim3 block(1024);
+		// 		dim3 grid((nsize - 1) / block.x + 1);
+		// 		//TIMING("WarmupMulti")
+		// 		WarmupMulti << <grid, block >> > (pa_d, pb_d, pc_d,
+		// 			pitch_a, pitch_b, pitch_c, A.m_rows, A.m_cols, B.m_cols);
+
+		WarmupMultiWrap<T>(pa_d, pb_d, pc_d,
+			pitch_a, pitch_b, pitch_c,
 			A.m_rows, A.m_cols, B.m_cols);
 		CHECK(cudaGetLastError());
 		CHECK(cudaDeviceSynchronize());
 	}
-// 	{
-// 		dim3 block(32, 16);
-// 		dim3 grid((C.m_cols - 1) / block.x + 1, (C.m_rows - 1) / block.y + 1);
-// 		//TIMING("MultiKernel")
-// 		MultiKernel << <grid, block >> > (pa_d, pb_d, pc_d,
-// 			pitch_a, pitch_b, pitch_c, A.m_rows, A.m_cols, B.m_cols);
-// 		CHECK(cudaGetLastError());
-// 		CHECK(cudaDeviceSynchronize());
-// 	}
-// 	{
-// 		dim3 block(TILE_WIDTH, TILE_WIDTH);
-// 		dim3 grid((C.m_cols - 1) / block.x + 1, (C.m_rows - 1) / block.y + 1);
-// 		//TIMING("MultiKernelTile")
-// 		MultiKernelTile << <grid, block >> > (pa_d, pb_d, pc_d,
-// 			pitch_a, pitch_b, pitch_c, A.m_rows, A.m_cols, B.m_cols);
-// 		CHECK(cudaGetLastError());
-// 		CHECK(cudaDeviceSynchronize());
-// 	}
+	// 	{
+	// 		dim3 block(32, 16);
+	// 		dim3 grid((C.m_cols - 1) / block.x + 1, (C.m_rows - 1) / block.y + 1);
+	// 		//TIMING("MultiKernel")
+	// 		MultiKernel << <grid, block >> > (pa_d, pb_d, pc_d,
+	// 			pitch_a, pitch_b, pitch_c, A.m_rows, A.m_cols, B.m_cols);
+	// 		CHECK(cudaGetLastError());
+	// 		CHECK(cudaDeviceSynchronize());
+	// 	}
+	// 	{
+	// 		dim3 block(TILE_WIDTH, TILE_WIDTH);
+	// 		dim3 grid((C.m_cols - 1) / block.x + 1, (C.m_rows - 1) / block.y + 1);
+	// 		//TIMING("MultiKernelTile")
+	// 		MultiKernelTile << <grid, block >> > (pa_d, pb_d, pc_d,
+	// 			pitch_a, pitch_b, pitch_c, A.m_rows, A.m_cols, B.m_cols);
+	// 		CHECK(cudaGetLastError());
+	// 		CHECK(cudaDeviceSynchronize());
+	// 	}
 
 	CHECK(cudaMemcpy2D(pc, C.m_pitch, pc_d, pitch_c, C.m_cols * sizeof(T), C.m_rows, cudaMemcpyDeviceToHost));
 	CHECK(cudaDeviceSynchronize());

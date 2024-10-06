@@ -1,6 +1,7 @@
-﻿#include "kernel.cuh"
+﻿#include "xMatrix.h"
 
-__global__ void WarmupMulti(float* src1, float* src2, float* dst,
+template <typename T>
+__global__ void WarmupMulti(T* src1, T* src2, T* dst,
 	size_t pitch_src1, size_t pitch_src2, size_t pitch_dst,
 	size_t M, size_t N, size_t S)
 {
@@ -12,14 +13,14 @@ __global__ void WarmupMulti(float* src1, float* src2, float* dst,
 	{
 		size_t offset_s1 = idx_r * pitch_src1;
 		size_t offset_dst = idx_r * pitch_dst;
-		float* ptr_s1 = (float*)((char*)src1 + offset_s1);
-		float* ptr_d = (float*)((char*)dst + offset_dst);
+		T* ptr_s1 = (T*)((char*)src1 + offset_s1);
+		T* ptr_d = (T*)((char*)dst + offset_dst);
 
-		float tmp = 0;
+		T tmp = 0;
 		for (size_t i = 0; i < N; i++)
 		{
 			size_t offset_s2 = i * pitch_src2;
-			float* ptr_s2 = (float*)((char*)src2 + offset_s2);
+			T* ptr_s2 = (T*)((char*)src2 + offset_s2);
 
 			tmp += ptr_s1[i] * ptr_s2[idx_c];
 		}
@@ -27,7 +28,9 @@ __global__ void WarmupMulti(float* src1, float* src2, float* dst,
 	}
 }
 
-void WarmupMultiWrap(float* src1, float* src2, float* dst,
+
+template <typename T>
+void WarmupMultiWrap(T* src1, T* src2, T* dst,
 	size_t pitch_src1, size_t pitch_src2, size_t pitch_dst,
 	size_t M, size_t N, size_t S)
 {
@@ -40,3 +43,9 @@ void WarmupMultiWrap(float* src1, float* src2, float* dst,
 		pitch_src1, pitch_src2, pitch_dst,
 		M, N, S);
 }
+
+
+template xMatrix<float>;
+//template xMatrix<int>;
+
+template void multi17(const xMatrixf& A, const xMatrixf& B, xMatrixf& C);

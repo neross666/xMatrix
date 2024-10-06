@@ -23,7 +23,7 @@ if(USE_CUDA)
 	include_directories(${CUDAToolkit_INCLUDE_DIRS})
     
 	add_executable(xMatrix ${cpu_source_files} ${gpu_source_files})
-    
+    set_target_properties(xMatrix PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 	target_link_libraries(xMatrix CUDA::cudart)
 else(USE_CUDA)
     add_executable(xMatrix ${cpu_source_files})
