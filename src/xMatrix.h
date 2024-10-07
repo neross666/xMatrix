@@ -14,10 +14,14 @@
 #include "device_launch_parameters.h"
 
 template <class T>
-void WarmupMultiWrap(T* src1, T* src2, T* dst,
+void NormalMultiWrap(T* src1, T* src2, T* dst,
 	size_t pitch_src1, size_t pitch_src2, size_t pitch_dst,
 	size_t M, size_t N, size_t S);
 
+template<typename T>
+void MultiKernelTileWrap(T* src1, T* src2, T* dst,
+	size_t pitch_src1, size_t pitch_src2, size_t pitch_dst,
+	size_t M, size_t N, size_t S);
 
 
 template <typename T>
@@ -1756,7 +1760,6 @@ void multi17(const xMatrix<T>& A, const xMatrix<T>& B, xMatrix<T>& C)
 	T* pa = A.m_pData;
 	T* pb = B.m_pData;
 	T* pc = C.m_pData;
-	size_t nsize = C.m_rows * C.m_cols;
 
 	T* pb_d = nullptr;
 	T* pa_d = nullptr;
@@ -1773,36 +1776,17 @@ void multi17(const xMatrix<T>& A, const xMatrix<T>& B, xMatrix<T>& C)
 
 
 	{
-		// 		dim3 block(1024);
-		// 		dim3 grid((nsize - 1) / block.x + 1);
-		// 		//TIMING("WarmupMulti")
-		// 		WarmupMulti << <grid, block >> > (pa_d, pb_d, pc_d,
-		// 			pitch_a, pitch_b, pitch_c, A.m_rows, A.m_cols, B.m_cols);
-
-		WarmupMultiWrap<T>(pa_d, pb_d, pc_d,
+		NormalMultiWrap(pa_d, pb_d, pc_d,
 			pitch_a, pitch_b, pitch_c,
 			A.m_rows, A.m_cols, B.m_cols);
-		CHECK(cudaGetLastError());
-		CHECK(cudaDeviceSynchronize());
 	}
-	// 	{
-	// 		dim3 block(32, 16);
-	// 		dim3 grid((C.m_cols - 1) / block.x + 1, (C.m_rows - 1) / block.y + 1);
-	// 		//TIMING("MultiKernel")
-	// 		MultiKernel << <grid, block >> > (pa_d, pb_d, pc_d,
-	// 			pitch_a, pitch_b, pitch_c, A.m_rows, A.m_cols, B.m_cols);
-	// 		CHECK(cudaGetLastError());
-	// 		CHECK(cudaDeviceSynchronize());
-	// 	}
-	// 	{
-	// 		dim3 block(TILE_WIDTH, TILE_WIDTH);
-	// 		dim3 grid((C.m_cols - 1) / block.x + 1, (C.m_rows - 1) / block.y + 1);
-	// 		//TIMING("MultiKernelTile")
-	// 		MultiKernelTile << <grid, block >> > (pa_d, pb_d, pc_d,
-	// 			pitch_a, pitch_b, pitch_c, A.m_rows, A.m_cols, B.m_cols);
-	// 		CHECK(cudaGetLastError());
-	// 		CHECK(cudaDeviceSynchronize());
-	// 	}
+// 	{
+// 		MultiKernelTileWrap(pa_d, pb_d, pc_d,
+// 			pitch_a, pitch_b, pitch_c,
+// 			A.m_rows, A.m_cols, B.m_cols);
+// 	}
+	CHECK(cudaGetLastError());
+	CHECK(cudaDeviceSynchronize());
 
 	CHECK(cudaMemcpy2D(pc, C.m_pitch, pc_d, pitch_c, C.m_cols * sizeof(T), C.m_rows, cudaMemcpyDeviceToHost));
 	CHECK(cudaDeviceSynchronize());

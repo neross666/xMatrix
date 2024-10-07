@@ -2,9 +2,9 @@
 #include <spdlog/spdlog.h>
 
 
-#define M 4
-#define N 4
-#define K 4
+#define M 16
+#define N 16
+#define K 16
 
 int main()
 {
