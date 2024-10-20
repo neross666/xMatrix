@@ -2,9 +2,9 @@
 #include <spdlog/spdlog.h>
 
 
-#define M 16
-#define N 16
-#define K 16
+constexpr int M = 16;
+constexpr int N = 16;
+constexpr int K = 16;
 
 int main()
 {
