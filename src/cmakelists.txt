@@ -22,6 +22,8 @@ if(USE_CUDA)
     find_package(CUDAToolkit REQUIRED)
 	include_directories(${CUDAToolkit_INCLUDE_DIRS})
     
+	set(CMAKE_CUDA_ARCHITECTURES 61)
+
 	add_executable(xMatrix ${cpu_source_files} ${gpu_source_files})
     set_target_properties(xMatrix PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 	target_link_libraries(xMatrix CUDA::cudart)
@@ -48,5 +50,3 @@ xMatrix
 	)
 
 
-
-#set(CMAKE_CUDA_ARCHITECTURES 61)

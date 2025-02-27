@@ -95,7 +95,7 @@ inline bool isEqual(const xMatrix<T>& A, const xMatrix<T>& B) {
 		for (int j = 0; j < A.m_cols; j++)
 		{
 			T delta = abs(A.m_pData[i * A.m_cols + j] - B.m_pData[i * B.m_cols + j]);
-			if (delta > 0.001/*FLT_EPSILON*/)
+			if (delta > 0.0001/*FLT_EPSILON*/)
 			{
 				return false;
 			}
@@ -1773,18 +1773,11 @@ void multi17(const xMatrix<T>& A, const xMatrix<T>& B, xMatrix<T>& C)
 	CHECK(cudaMemcpy2D(pa_d, pitch_a, pa, A.m_pitch, A.m_cols * sizeof(T), A.m_rows, cudaMemcpyHostToDevice));
 	CHECK(cudaMemcpy2D(pb_d, pitch_b, pb, B.m_pitch, B.m_cols * sizeof(T), B.m_rows, cudaMemcpyHostToDevice));
 	CHECK(cudaDeviceSynchronize());
-
-
-	{
-		NormalMultiWrap(pa_d, pb_d, pc_d,
-			pitch_a, pitch_b, pitch_c,
-			A.m_rows, A.m_cols, B.m_cols);
-	}
-// 	{
-// 		MultiKernelTileWrap(pa_d, pb_d, pc_d,
-// 			pitch_a, pitch_b, pitch_c,
-// 			A.m_rows, A.m_cols, B.m_cols);
-// 	}
+		
+	NormalMultiWrap(pa_d, pb_d, pc_d,
+		pitch_a, pitch_b, pitch_c,
+		A.m_rows, A.m_cols, B.m_cols);
+	
 	CHECK(cudaGetLastError());
 	CHECK(cudaDeviceSynchronize());
 
@@ -1797,3 +1790,41 @@ void multi17(const xMatrix<T>& A, const xMatrix<T>& B, xMatrix<T>& C)
 	cudaDeviceReset();
 }
 
+// cuda X
+template<typename T>
+void multi18(const xMatrix<T>& A, const xMatrix<T>& B, xMatrix<T>& C)
+{
+	initDevice(0);
+
+	T* pa = A.m_pData;
+	T* pb = B.m_pData;
+	T* pc = C.m_pData;
+
+	T* pb_d = nullptr;
+	T* pa_d = nullptr;
+	T* pc_d = nullptr;
+	size_t pitch_a = 0;
+	size_t pitch_b = 0;
+	size_t pitch_c = 0;
+	CHECK(cudaMallocPitch(&pa_d, &pitch_a, A.m_cols * sizeof(T), A.m_rows));
+	CHECK(cudaMallocPitch(&pb_d, &pitch_b, B.m_cols * sizeof(T), B.m_rows));
+	CHECK(cudaMallocPitch(&pc_d, &pitch_c, C.m_cols * sizeof(T), C.m_rows));
+	CHECK(cudaMemcpy2D(pa_d, pitch_a, pa, A.m_pitch, A.m_cols * sizeof(T), A.m_rows, cudaMemcpyHostToDevice));
+	CHECK(cudaMemcpy2D(pb_d, pitch_b, pb, B.m_pitch, B.m_cols * sizeof(T), B.m_rows, cudaMemcpyHostToDevice));
+	CHECK(cudaDeviceSynchronize());
+		
+	MultiKernelTileWrap(pa_d, pb_d, pc_d,
+	 	pitch_a, pitch_b, pitch_c,
+	 	A.m_rows, A.m_cols, B.m_cols);
+	
+	CHECK(cudaGetLastError());
+	CHECK(cudaDeviceSynchronize());
+
+	CHECK(cudaMemcpy2D(pc, C.m_pitch, pc_d, pitch_c, C.m_cols * sizeof(T), C.m_rows, cudaMemcpyDeviceToHost));
+	CHECK(cudaDeviceSynchronize());
+
+	cudaFree(pb_d);
+	cudaFree(pa_d);
+	cudaFree(pc_d);
+	cudaDeviceReset();
+}

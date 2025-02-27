@@ -58,12 +58,11 @@ __global__ void MultiKernelTile(T* src1, T* src2, T* dst,
 			T* ptr_s2 = (T*)((char*)src2 + offset_s2);
 
 			Ads[threadIdx.y][threadIdx.x] = ptr_s1[i * TILE_WIDTH + threadIdx.x];
-			Bds[threadIdx.y][threadIdx.x] = ptr_s2[idx_c];
+			Bds[threadIdx.x][threadIdx.y] = ptr_s2[idx_c];
 			__syncthreads();
 
-			for (size_t j = 0; j < TILE_WIDTH; j++)
-			{
-				tmp += Ads[threadIdx.x][j] * Bds[threadIdx.y][j];
+			for (size_t j = 0; j < TILE_WIDTH; j++) {
+				tmp += Ads[threadIdx.y][j] * Bds[threadIdx.x][j];
 			}
 			__syncthreads();
 		}
@@ -101,5 +100,7 @@ template xMatrix<float>;
 //template xMatrix<int>;
 
 template void multi17(const xMatrixf& A, const xMatrixf& B, xMatrixf& C);
+
+template void multi18(const xMatrixf& A, const xMatrixf& B, xMatrixf& C);
 
 #pragma endregion Multiply

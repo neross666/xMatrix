@@ -2,9 +2,9 @@
 #include <spdlog/spdlog.h>
 
 
-constexpr int M = 16;
-constexpr int N = 16;
-constexpr int K = 16;
+constexpr int M = 1024;
+constexpr int N = 1024;
+constexpr int K = 1024;
 
 int main()
 {
@@ -19,21 +19,15 @@ int main()
 	multi1(*A, *B, C1);
 	spdlog::info("multi1 done.");
 
-	spdlog::info("multi2 begin...");
-	multi2(*A, *B, C2);
-	spdlog::info("multi2 done.");
-
 	spdlog::info("multi17 begin...");
-	multi17(*A, *B, C3);
+	multi17(*A, *B, C2);
 	spdlog::info("multi17 done.");
+	assert(isEqual(C1, C2));
 
-	print(C1);
-	print(C3);
+	spdlog::info("multi18 begin...");
+	multi18(*A, *B, C3);
+	spdlog::info("multi18 done.");
 	assert(isEqual(C1, C3));
-
-	print(*A);
-	print(*B);
-	print(C1);
 
 	return 0;
 }
