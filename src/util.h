@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #define CHECK(call)\
 {\
   const cudaError_t error=call;\
@@ -18,5 +18,16 @@
 #	include <sys/time.h>
 #endif
 
-void initDevice(int devNo);
+#ifndef NOMINMAX
 
+#ifndef max
+#define max(a,b)            (((a) > (b)) ? (a) : (b))
+#endif
+
+#ifndef min
+#define min(a,b)            (((a) < (b)) ? (a) : (b))
+#endif
+
+#endif  /* NOMINMAX */
+
+void initDevice(int devNo);

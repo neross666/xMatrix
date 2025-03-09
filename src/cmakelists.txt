@@ -12,6 +12,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(OpenMP REQUIRED)
 find_package(spdlog REQUIRED)
+find_package(Catch2 CONFIG REQUIRED)
+find_package(OpenBLAS CONFIG REQUIRED)
 
 file(GLOB cpu_source_files "${CMAKE_SOURCE_DIR}/*.cpp")
 file(GLOB gpu_source_files "${CMAKE_SOURCE_DIR}/*.cu")
@@ -26,7 +28,7 @@ if(USE_CUDA)
 
 	add_executable(xMatrix ${cpu_source_files} ${gpu_source_files})
     set_target_properties(xMatrix PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-	target_link_libraries(xMatrix CUDA::cudart)
+	target_link_libraries(xMatrix PRIVATE CUDA::cudart)
 else(USE_CUDA)
     add_executable(xMatrix ${cpu_source_files})
 endif()   
@@ -44,9 +46,11 @@ target_compile_definitions(xMatrix
 
 target_link_libraries(
 xMatrix 
-#PRIVATE 
+PRIVATE 
 	spdlog::spdlog
 	OpenMP::OpenMP_CXX
+	OpenBLAS::OpenBLAS
+	Catch2::Catch2 Catch2::Catch2WithMain
 	)
 
 

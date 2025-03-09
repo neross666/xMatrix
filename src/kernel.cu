@@ -5,16 +5,23 @@
 #define TILE_WIDTH 16	// dim3 block(TILE_HEIGHT, TILE_WIDTH);
 #define TILE_HEIGHT 32
 
+
+__global__ void warm_up_gpu() {
+	unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
+	float ia, ib;
+	ia = ib = 0.0f;
+	ib += ia + tid;
+}
+
 template <typename T>
 // 每次都是从global显存中读取，延时很长
 __global__ void NormalMulti(T* src1, T* src2, T* dst,
 	size_t pitch_src1, size_t pitch_src2, size_t pitch_dst,
 	size_t M, size_t N, size_t S)
 {
-	unsigned int tid = threadIdx.x + blockIdx.x * blockDim.x;
-	unsigned int idx_r = tid / S;
-	unsigned int idx_c = tid % S;
-
+	unsigned int idx_r = blockIdx.y * blockDim.y + threadIdx.y;	// dst数据索引
+	unsigned int idx_c = blockIdx.x * blockDim.x + threadIdx.x;	// 
+	
 	if (idx_r < M && idx_c < S)
 	{
 		size_t offset_s1 = idx_r * pitch_src1;
@@ -70,16 +77,21 @@ __global__ void MultiKernelTile(T* src1, T* src2, T* dst,
 	}
 }
 
+void warnupWrap()
+{
+	dim3 block(TILE_WIDTH, TILE_WIDTH);
+	dim3 grid(1, 1);
+	warm_up_gpu << <grid, block >> > ();
+}
 
 template <typename T>
 void NormalMultiWrap(T* src1, T* src2, T* dst,
 	size_t pitch_src1, size_t pitch_src2, size_t pitch_dst,
 	size_t M, size_t N, size_t S)
 {
-	rsize_t nsize = M * S;
+	dim3 block(TILE_WIDTH, TILE_WIDTH);
+	dim3 grid((S - 1) / block.x + 1, (M - 1) / block.y + 1);
 
-	dim3 block(4);
-	dim3 grid((nsize - 1) / block.x + 1);
 	NormalMulti << <grid, block >> > (src1, src2, dst,
 		pitch_src1, pitch_src2, pitch_dst,
 		M, N, S);

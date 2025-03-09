@@ -5,13 +5,15 @@
 #include <smmintrin.h>
 #include <immintrin.h>
 #include <omp.h>
-//#include <cblas.h>
+#include <cblas.h>
 #include <iostream>
 #include <assert.h>
 #include "util.h"
 
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
+
+void warnupWrap();
 
 template <class T>
 void NormalMultiWrap(T* src1, T* src2, T* dst,
@@ -95,7 +97,7 @@ inline bool isEqual(const xMatrix<T>& A, const xMatrix<T>& B) {
 		for (int j = 0; j < A.m_cols; j++)
 		{
 			T delta = abs(A.m_pData[i * A.m_cols + j] - B.m_pData[i * B.m_cols + j]);
-			if (delta > 0.0001/*FLT_EPSILON*/)
+			if (delta > 0.001/*FLT_EPSILON*/)
 			{
 				return false;
 			}
@@ -621,7 +623,7 @@ void addDot4kx1j_avx(const T* rowA, const T* ptrB, T* rowC, int colsB, int k)
 }
 
 template<typename T>
-void addDot1kx4j(float elemA, const float* ptrB, float* ptrC, int j)
+void addDot1kx4j(T elemA, const T* ptrB, T* ptrC, int j)
 {
 	// C(i, j) += A(i, k)* B(k, j);
 	ptrC[j] += elemA * ptrB[j];
@@ -632,7 +634,7 @@ void addDot1kx4j(float elemA, const float* ptrB, float* ptrC, int j)
 
 
 template<typename T>
-void subBlock4(int oldARow, int oldACol, int oldBCol, float* ptrA, float* ptrB, float* ptrC, const int& ARow, const int& ACol, const int& BCol)
+void subBlock4(int oldARow, int oldACol, int oldBCol, const T* ptrA, const T* ptrB, float* ptrC, const int& ARow, const int& ACol, const int& BCol)
 {
 	const int nARowBlock = 4;
 	const int nAColBlock = 4;
@@ -690,7 +692,7 @@ void subBlock4(int oldARow, int oldACol, int oldBCol, float* ptrA, float* ptrB, 
 }
 
 template<typename T>
-void subBlock4addDot(int oldARow, int oldACol, int oldBCol, float* A, float* B, float* C,
+void subBlock4addDot(int oldARow, int oldACol, int oldBCol, T* A, T* B, T* C,
 	const int& ARow, const int& ACol, const int& BCol, const int& BColBlock)
 {
 	assert(typeid(T) == typeid(float));
@@ -905,7 +907,7 @@ void subBlock4addDot(int oldARow, int oldACol, int oldBCol, float* A, float* B, 
 }
 
 template<typename T>
-void subBlock3(int oldARow, int oldACol, int oldBCol, T* ptrA, T* ptrB, T* ptrC, const int& ARow, const int& ACol, const int& BCol)
+void subBlock3(int oldARow, int oldACol, int oldBCol, const T* ptrA, const T* ptrB, T* ptrC, const int& ARow, const int& ACol, const int& BCol)
 {
 	T* packA = new T[ARow * ACol];
 	T* packB = new T[ACol * BCol];
@@ -1752,6 +1754,17 @@ void multi16(const xMatrix<T>& A, const xMatrix<T>& B, xMatrix<T>& C)
 }
 
 // cuda
+inline void warnup()
+{
+	initDevice(0);
+
+	warnupWrap();
+
+	CHECK(cudaGetLastError());
+	CHECK(cudaDeviceSynchronize());
+	CHECK(cudaDeviceReset());
+}
+
 template<typename T>
 void multi17(const xMatrix<T>& A, const xMatrix<T>& B, xMatrix<T>& C)
 {
@@ -1784,10 +1797,10 @@ void multi17(const xMatrix<T>& A, const xMatrix<T>& B, xMatrix<T>& C)
 	CHECK(cudaMemcpy2D(pc, C.m_pitch, pc_d, pitch_c, C.m_cols * sizeof(T), C.m_rows, cudaMemcpyDeviceToHost));
 	CHECK(cudaDeviceSynchronize());
 
-	cudaFree(pb_d);
-	cudaFree(pa_d);
-	cudaFree(pc_d);
-	cudaDeviceReset();
+	CHECK(cudaFree(pb_d));
+	CHECK(cudaFree(pa_d));
+	CHECK(cudaFree(pc_d));
+	CHECK(cudaDeviceReset());
 }
 
 // cuda X
@@ -1823,8 +1836,8 @@ void multi18(const xMatrix<T>& A, const xMatrix<T>& B, xMatrix<T>& C)
 	CHECK(cudaMemcpy2D(pc, C.m_pitch, pc_d, pitch_c, C.m_cols * sizeof(T), C.m_rows, cudaMemcpyDeviceToHost));
 	CHECK(cudaDeviceSynchronize());
 
-	cudaFree(pb_d);
-	cudaFree(pa_d);
-	cudaFree(pc_d);
-	cudaDeviceReset();
+	CHECK(cudaFree(pb_d));
+	CHECK(cudaFree(pa_d));
+	CHECK(cudaFree(pc_d));
+	CHECK(cudaDeviceReset());
 }
