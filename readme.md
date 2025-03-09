@@ -26,7 +26,7 @@
 	- multi9 execution time: 57ms
 	- multi10 execution time: 54ms
 	- multi11 execution time: 18ms
-	- multi12 execution time: 306ms
+	- *multi12 execution time: 306ms* ---> use openBlas
 	- multi13 execution time: 75ms
 	- multi14 execution time: 75ms
 	- multi15 execution time: 76ms
